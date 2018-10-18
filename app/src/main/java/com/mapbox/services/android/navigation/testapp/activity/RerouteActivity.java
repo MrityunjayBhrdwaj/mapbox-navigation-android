@@ -23,11 +23,11 @@ import com.mapbox.mapboxsdk.annotations.PolylineOptions;
 import com.mapbox.mapboxsdk.camera.CameraPosition;
 import com.mapbox.mapboxsdk.camera.CameraUpdateFactory;
 import com.mapbox.mapboxsdk.geometry.LatLng;
+import com.mapbox.mapboxsdk.location.LocationComponent;
+import com.mapbox.mapboxsdk.location.modes.RenderMode;
 import com.mapbox.mapboxsdk.maps.MapView;
 import com.mapbox.mapboxsdk.maps.MapboxMap;
 import com.mapbox.mapboxsdk.maps.OnMapReadyCallback;
-import com.mapbox.mapboxsdk.plugins.locationlayer.LocationLayerPlugin;
-import com.mapbox.mapboxsdk.plugins.locationlayer.modes.RenderMode;
 import com.mapbox.services.android.navigation.testapp.R;
 import com.mapbox.services.android.navigation.ui.v5.instruction.InstructionView;
 import com.mapbox.services.android.navigation.v5.location.replay.ReplayRouteLocationEngine;
@@ -67,7 +67,6 @@ public class RerouteActivity extends AppCompatActivity implements OnMapReadyCall
   private Point destination = Point.fromLngLat(-0.383524, 39.497825);
   private Polyline polyline;
 
-  private LocationLayerPlugin locationLayerPlugin;
   private ReplayRouteLocationEngine mockLocationEngine;
   private MapboxNavigation navigation;
   private MapboxMap mapboxMap;
@@ -107,8 +106,8 @@ public class RerouteActivity extends AppCompatActivity implements OnMapReadyCall
   protected void onStart() {
     super.onStart();
     mapView.onStart();
-    if (locationLayerPlugin != null) {
-      locationLayerPlugin.onStart();
+    if (mapboxMap != null) {
+      mapboxMap.getLocationComponent().onStart();
     }
   }
 
@@ -125,8 +124,8 @@ public class RerouteActivity extends AppCompatActivity implements OnMapReadyCall
 
     shutdownLocationEngine();
 
-    if (locationLayerPlugin != null) {
-      locationLayerPlugin.onStop();
+    if (mapboxMap != null) {
+      mapboxMap.getLocationComponent().onStop();
     }
 
     if (navigation != null) {
@@ -159,8 +158,10 @@ public class RerouteActivity extends AppCompatActivity implements OnMapReadyCall
     this.mapboxMap = mapboxMap;
     mapboxMap.addOnMapClickListener(this);
 
-    locationLayerPlugin = new LocationLayerPlugin(mapView, mapboxMap);
-    locationLayerPlugin.setRenderMode(RenderMode.GPS);
+    LocationComponent locationComponent = mapboxMap.getLocationComponent();
+    locationComponent.activateLocationComponent(this);
+    locationComponent.setLocationComponentEnabled(true);
+    locationComponent.setRenderMode(RenderMode.GPS);
 
     mockLocationEngine = new ReplayRouteLocationEngine();
     mockLocationEngine.addLocationEngineListener(this);
@@ -177,7 +178,7 @@ public class RerouteActivity extends AppCompatActivity implements OnMapReadyCall
   @Override
   public void onLocationChanged(Location location) {
     if (!tracking) {
-      locationLayerPlugin.forceLocationUpdate(location);
+      mapboxMap.getLocationComponent().forceLocationUpdate(location);
     }
   }
 
@@ -225,7 +226,7 @@ public class RerouteActivity extends AppCompatActivity implements OnMapReadyCall
       Snackbar.make(contentLayout, "Exit tunnel!", Snackbar.LENGTH_SHORT).show();
     }
     if (tracking) {
-      locationLayerPlugin.forceLocationUpdate(location);
+      mapboxMap.getLocationComponent().forceLocationUpdate(location);
       CameraPosition cameraPosition = new CameraPosition.Builder()
         .zoom(15)
         .target(new LatLng(location.getLatitude(), location.getLongitude()))
